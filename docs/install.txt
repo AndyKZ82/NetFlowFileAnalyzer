@@ -1,0 +1,21 @@
+Installation notes.
+
+Apache 2.4
+
+Copy folder "netflow" to your web site.
+
+httpd.conf:
+
+Index and option for folder.
+
+<Directory "path/to/netflow>
+    Options ExecCGI
+    AllowOverride None
+    DirectoryIndex netflow.pl
+</Directory>
+
+Allow scripts and associate .pl with CGI.
+
+AddHandler cgi-script .cgi .pl
+
+
