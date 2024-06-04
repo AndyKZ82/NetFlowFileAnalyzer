@@ -30,7 +30,9 @@ To use NetFlowFileAnalyzer scripts, you need the following requirements:
 The distribution of AWStats package includes the following files:
 
 	README.md                           This file
+ 	docs/*                              Documentation
 	netflow/awstats.pl                  THE MAIN PROGRAM (WebUI, CGI)
+ 	tools/load2sql.pl                   Script to load data from files to MySQL
 
 ## INSTALL, SETUP AND USE AWSTATS
 
