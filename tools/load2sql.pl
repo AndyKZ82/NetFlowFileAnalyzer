@@ -2,7 +2,6 @@
 
 use DBI;
 use Time::localtime;
-#use POSIX ":sys_wait_h";
 
 #########################
 #########################
@@ -10,9 +9,9 @@ my $serverdb = "localhost";
 my $dbname = "netflow";
 my $dbuser = "flowtools";
 my $dbpass = "7ii48aws";
-my $ipacct_log = "/tmp/load2sql.log";
-my @ipacct_arr;
-my @ipacct_arr_in;
+my $flowfile_log = "/tmp/load2sql.log";
+my @flowfile_arr;
+my @flowfile_arr_in;
 
 my $fcat = "/usr/local/bin/flow-cat";
 my $fprint = "/usr/local/bin/flow-print";
@@ -21,27 +20,18 @@ my $interface = "g";
 ##########################
 ##########################
 
-$gm = localtime();
-$year = ($gm->year()) + 1900;
-$month = ($gm->mon()) + 1;
-if ($month < "10") {
-    $month = "0"."$month";
-}
-$mday = $gm->mday();
-#$date = "$mday-$mounth-$year"; #why?
-$hour = $gm->hour();
-$min = $gm->min();
-$sec = $gm->sec();
-$hour=sprintf("%02d",$hour);
-$min=sprintf("%02d",$min);
-$sec=sprintf("%02d",$sec);
-$time = "$hour\:$min\:$sec"; #current time - 15:05:40
+$lt = localtime();
+$year = ($lt->year()) + 1900;
+$month = sprintf("%02d",(($lt->mon()) + 1));
+$mday = sprintf("%02d",$lt->mday());
+$hour=sprintf("%02d",$lt->hour());
+$min=sprintf("%02d",$lt->min());
+$sec=sprintf("%02d",$lt->sec());
 $table_date = "$year\_$month";
 
 my $date_ins;
 my $time_ins;
 
-my $mday2;
 my $flowpath;
 my $flowfile;
 my @flowhour;
@@ -55,14 +45,7 @@ my $hour3;
 my $minutes3;
 my $seconds3;
 
-if ($mday < "10") {
-        $mday2 = "0"."$mday";
-        }
-        else {
-        $mday2 = $mday;
-}
-
-$flowpath = "/var/flow/test/$year-$month/$year-$month-$mday2";
+$flowpath = "/var/flow/test/$year-$month/$year-$month-$mday";
 
 $min2 = $min-1;
 
@@ -87,7 +70,7 @@ while (@flows) {
 
         chomp($frow);
 
-        system "$fcat $frow \| $fprint \| grep -v 'prot' > $ipacct_log";
+        system "$fcat $frow \| $fprint \| grep -v 'prot' > $flowfile_log";
 
         my ($part01, $part02) = split /\+/, $frow, 2;
         my ($part11, $part12, $part13) = split /\./, $part01, 3;
@@ -139,9 +122,9 @@ $dbh->disconnect;
 sub error_connection {
 
 print "Error.\n";
-foreach $line_arr(@ipacct_arr_in) {
+foreach $line_arr(@flowfile_arr_in) {
 
-        open (DUMPFILE, ">>$ipacct_log");
+        open (DUMPFILE, ">>$flowfile_log");
         $line_arr = "$line_arr\n";
         print DUMPFILE $line_arr;
         close (DUMPFILE);
@@ -173,8 +156,8 @@ $insert = "INSERT INTO $table_date (src_ip,src_port,dst_ip,dst_port,proto,packet
 
 $sth = $dbh->prepare("$insert");
 #print "$insert\n";
-while (@ipacct_arr_in) {
-        $line_in = shift @ipacct_arr_in;
+while (@flowfile_arr_in) {
+        $line_in = shift @flowfile_arr_in;
 #       ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$packets,$bytes,$date_ins,$time_ins,$host,$interface)=split(/[\s\t]+/,$line_in);
         ($src_ip,$dst_ip,$proto,$src_port,$dst_port,$bytes,$packets)=split(/[\s\t]+/,$line_in);
         if (!defined $proto){
@@ -204,14 +187,14 @@ $dbh->disconnect;
 }
 
 sub parse_log_file {
-open (PARSFILE, "$ipacct_log");
+open (PARSFILE, "$flowfile_log");
 while ($line_parse=<PARSFILE>) {
         chomp $line_parse;
         $line_parse =~ s/[\s\t]+/\t/g;
-        push @ipacct_arr_in, $line_parse;
+        push @flowfile_arr_in, $line_parse;
 }
 close (PARSFILE);
-truncate ("$ipacct_log",0);
+truncate ("$flowfile_log",0);
 }
 
 exit(0);
