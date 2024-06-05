@@ -1,7 +1,8 @@
 #!/usr/local/bin/perl -w
 
 use DBI;
-use Time::localtime;
+#use Time::localtime;
+use Time::Piece;
 
 #########################
 #########################
@@ -15,19 +16,15 @@ my @flowfile_arr_in;
 
 my $fcat = "/usr/local/bin/flow-cat";
 my $fprint = "/usr/local/bin/flow-print";
-my $host = "m";
-my $interface = "g";
+my $iface = "test";
 ##########################
 ##########################
 
-$lt = localtime();
-$year = ($lt->year()) + 1900;
-$month = sprintf("%02d",(($lt->mon()) + 1));
-$mday = sprintf("%02d",$lt->mday());
-$hour=sprintf("%02d",$lt->hour());
-$min=sprintf("%02d",$lt->min());
-$sec=sprintf("%02d",$lt->sec());
-$table_date = "$year\_$month";
+$lt = localtime;
+$year = $lt->year;
+$month = sprintf("%02d",$lt->mon);
+$mday = sprintf("%02d",$lt->mday);
+$table_name = "$iface\_$year\_$month";
 
 my $date_ins;
 my $time_ins;
@@ -35,31 +32,8 @@ my $time_ins;
 my $flowpath;
 my $flowfile;
 my @flowhour;
-my $min2;
-my $hour2;
 
-my $year3;
-my $month3;
-my $mday3;
-my $hour3;
-my $minutes3;
-my $seconds3;
-
-$flowpath = "/var/flow/test/$year-$month/$year-$month-$mday";
-
-$min2 = $min-1;
-
-if ($hour == "0") {
-        $hour2 = "23";
-        }
-        else {
-        $hour2 = $hour-1;
-}
-
-if ($hour2 < "10") {
-        $hour2 = "0"."$hour2";
-        }
-
+$flowpath = "/var/flow/$iface/$year-$month/$year-$month-$mday"; #flow-capture -N-2
 $flowfile = "ft-v05."."*";
 
 @flows = `ls $flowpath/$flowfile`;
@@ -72,14 +46,12 @@ while (@flows) {
 
         system "$fcat $frow \| $fprint \| grep -v 'prot' > $flowfile_log";
 
-        my ($part01, $part02) = split /\+/, $frow, 2;
-        my ($part11, $part12, $part13) = split /\./, $part01, 3;
-        ($year3, $month3, $mday3) = split /\-/, $part12, 3;
-        ($hour3, $minutes3, $seconds3) = split /(?(?{ pos() % 2 })(?!))/, $part13, 3;
-
-        $date_ins = "$mday3-$month3-$year3";
-        $time_ins = "$hour3:$minutes3";
-
+        $fname = $frow;
+        $fname =~ s/$flowpath\///;
+        $ftime = Time::Piece->strptime($fname, 'ft-v05.%Y-%m-%d.%H%M%S+0700');
+#        $ftime = Time::Piece->strptime($fname, 'ft-v05.%Y-%m-%d.%H%M%S%z'); with timezone
+	$uftime = $ftime->datetime;
+        
         &parse_log_file;
         &check_in_mysql;
         &insert_data_db;
@@ -103,7 +75,7 @@ $crt_tbl="yes";
 while (@dbtables) {
         $table = shift @dbtables;
         if (defined $table) {
-                if ($table eq $table_date) {
+                if ($table eq $table_name) {
                         $crt_tbl="no";
                 }
         }
@@ -138,9 +110,9 @@ sub crt_table_log {
         my ($dbh,$sth,$count);
         $dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
                 or &error_connection;
-        $select = "CREATE  TABLE $table_date (src_ip INT UNSIGNED NOT NULL,src_port SMALLINT UNSIGNED DEFAULT(0) NOT NULL ,dst_ip INT UNSIGNED NOT NULL,dst_port SMALLINT UNSIGNED DEFAULT(0) NOT NULL, proto TINYINT UNSIGNED,
-packets int(8), bytes bigint(20) default 0,date_ins varchar(32), time_ins time,host  varchar(128), interface varchar(8),index (src_ip),index
-(dst_ip),index (proto),index (packets), index (bytes),index (host), index (time_ins), index (date_ins), index (interface)) ENGINE = MyISAM";
+        $select = "CREATE  TABLE $table_name (src_ip INT UNSIGNED NOT NULL,src_port SMALLINT UNSIGNED DEFAULT(0) NOT NULL ,dst_ip INT UNSIGNED NOT NULL,dst_port SMALLINT UNSIGNED DEFAULT(0) NOT NULL, proto TINYINT UNSIGNED,
+packets int(8), bytes bigint(20) default (0),utime TIMESTAMP NOT NULL,index (src_ip),index
+(dst_ip),index (proto),index (utime)) ENGINE = MyISAM";
         $sth = $dbh->prepare("$select");
         $sth->execute ();
         $sth->finish;
@@ -152,13 +124,11 @@ sub insert_data_db {
 my ($dbh,$sth,$count);
 $dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
                 or &error_connection_in;
-$insert = "INSERT INTO $table_date (src_ip,src_port,dst_ip,dst_port,proto,packets,bytes,date_ins,time_ins,host,interface) VALUES (INET_ATON(?),?,INET_ATON(?),?,?,?,?,?,?,?,?)";
+$insert = "INSERT INTO $table_name (src_ip,src_port,dst_ip,dst_port,proto,packets,bytes,utime) VALUES (INET_ATON(?),?,INET_ATON(?),?,?,?,?,?)";
 
 $sth = $dbh->prepare("$insert");
-#print "$insert\n";
 while (@flowfile_arr_in) {
         $line_in = shift @flowfile_arr_in;
-#       ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$packets,$bytes,$date_ins,$time_ins,$host,$interface)=split(/[\s\t]+/,$line_in);
         ($src_ip,$dst_ip,$proto,$src_port,$dst_port,$bytes,$packets)=split(/[\s\t]+/,$line_in);
         if (!defined $proto){
                 $proto="0";
@@ -179,7 +149,7 @@ while (@flowfile_arr_in) {
 #        if ($dst_ip eq "10.2.214.20") {next;}
 #        if ($src_ip eq "81.30.196.90") {next;}
 #        if ($ip_to eq "81.30.196.90") {next;}
-        $sth->execute ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$packets,$bytes,$date_ins,$time_ins,$host,$interface);
+        $sth->execute ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$packets,$bytes,$uftime);
 }
 
 $sth->finish;
