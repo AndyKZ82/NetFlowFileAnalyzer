@@ -1,8 +1,8 @@
 #!/usr/local/bin/perl -w
 
 use DBI;
-#use Time::localtime;
 use Time::Piece;
+use Net::IP::Match::Regexp qw( create_iprange_regexp match_ip );
 
 #########################
 #########################
@@ -18,6 +18,11 @@ my $fcat = "/usr/local/bin/flow-cat";
 my $fprint = "/usr/local/bin/flow-print";
 my $iface = "test";
 my $type = 0;
+my $local_ips = create_iprange_regexp(
+    qw( 192.168.36.0/24 84.54.5.29)
+);
+my $ip_router = "84.54.5.29";
+my @service_ports = (22,25,80,443,10022,8291,8080,8081,8082,8083,500,4500,1701);
 ##########################
 ##########################
 
@@ -51,8 +56,8 @@ while (@flows) {
     $uftime = $ftime->datetime;
     &parse_log_file;
     &check_in_mysql;
-#    &insert_comb_data_db;
-    &insert_data_db;
+    &insert_comb_data_db;
+#    &insert_data_db;
 }
 
 sub check_in_mysql {
@@ -129,16 +134,6 @@ while (@flowfile_arr_in) {
     if (!defined $bytes){
         $bytes="0";
     }
-#        if ($dst_ip =~ m/.255/) {next;}
-#        if ($dst_ip =~ m/239./) {next;}
-#        if ($dst_ip =~ m/224./) {next;}
-#        if ($proto eq "17" and $src_port eq "53") {next;}
-#        if ($proto eq "17" and $dst_port eq "53") {next;}
-#        if ($proto eq "1") {next;}
-#        if ($src_ip eq "10.2.214.20") {next;}
-#        if ($dst_ip eq "10.2.214.20") {next;}
-#        if ($src_ip eq "81.30.196.90") {next;}
-#        if ($ip_to eq "81.30.196.90") {next;}
     $sth->execute ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$packets,$bytes,$type,$uftime);
 }
 $sth->finish;
@@ -151,6 +146,7 @@ my ($dbh,$sth,$count);
 $dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
     or &error_connection_in;
 $insert = "INSERT INTO $table_name (src_ip,src_port,dst_ip,dst_port,proto,packets,bytes,type,utime) VALUES (INET_ATON(?),?,INET_ATON(?),?,?,?,?,?,?)";
+$update = "UPDATE $table_name SET packets=packets+?, bytes=bytes+? where src_ip=INET_ATON(?) and src_port=? and dst_ip=INET_ATON(?) and dst_port=? and proto=? and type=? and utime=?";
 while (@flowfile_arr_in) {
     $line_in = shift @flowfile_arr_in;
     ($src_ip,$dst_ip,$proto,$src_port,$dst_port,$bytes,$packets)=split(/[\s\t]+/,$line_in);
@@ -163,36 +159,56 @@ while (@flowfile_arr_in) {
     if (!defined $bytes){
         $bytes="0";
     }
-    if ($src_ip eq "192.168.36.15") {
-        $check = "SELECT EXISTS (SELECT * from $table_name where src_ip=INET_ATON(?) and dst_port=? and proto=? and utime=?)";
+    if (match_ip($src_ip, $local_ips)) {
+	if ( grep( /^$src_port$/, @service_ports ) ) {
+	    $type = 3;
+	    $dst_port = 0;
+	} else {
+	    $type = 1;
+	    $src_port = 0;
+	}
+        $check = "SELECT EXISTS (SELECT * from $table_name where src_ip=INET_ATON(?) and src_port=? and dst_ip=INET_ATON(?) and dst_port=? and proto=? and type=? and utime=?)";
         $sth = $dbh->prepare("$check");
-        $sth->execute ($src_ip,$dst_port,$proto,$uftime);
+        $sth->execute ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$type,$uftime);
         @row = $sth->fetchrow_array;
-        print $row[0]," ",$src_port," ";
         $sth->finish;
         if ($row[0] eq 1) {
-	    print "pass1 ";
+	    $sth = $dbh->prepare("$update");
+    	    $sth->execute ($packets,$bytes,$src_ip,$src_port,$dst_ip,$dst_port,$proto,$type,$uftime);
 	} else {
 	    $sth = $dbh->prepare("$insert");
-    	    $sth->execute ($src_ip,0,$dst_ip,$dst_port,$proto,$packets,$bytes,$type,$uftime);
+    	    $sth->execute ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$packets,$bytes,$type,$uftime);
 	}
-    } elsif ($src_ip eq "192.168.36.115") {
-        $check = "SELECT EXISTS (SELECT * from $table_name where src_port=?)";
+    } elsif (match_ip($dst_ip, $local_ips)) {
+	if ( grep( /^$dst_port$/, @service_ports ) ) {
+	    $type = 4;
+	    $src_port = 0;
+	} else {
+	    if (($dst_ip eq $ip_router) and ($dst_port < 20000)) {
+		$type = 5;
+		$src_port = 0;
+	    } else {
+		$type = 2;
+		$dst_port = 0;
+	    }
+	}
+        $check = "SELECT EXISTS (SELECT * from $table_name where src_ip=INET_ATON(?) and src_port=? and dst_ip=INET_ATON(?) and dst_port=? and proto=? and type=? and utime=?)";
         $sth = $dbh->prepare("$check");
-        $sth->execute ($src_port);
+        $sth->execute ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$type,$uftime);
         @row = $sth->fetchrow_array;
-        print $row[0]," ",$src_port," ";
         $sth->finish;
         if ($row[0] eq 1) {
-	    print "pass2 ";
+	    $sth = $dbh->prepare("$update");
+    	    $sth->execute ($packets,$bytes,$src_ip,$src_port,$dst_ip,$dst_port,$proto,$type,$uftime);
 	} else {
 	    $sth = $dbh->prepare("$insert");
     	    $sth->execute ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$packets,$bytes,$type,$uftime);
 	}
     } else {
+	$type = 0;
 	$sth = $dbh->prepare("$insert");
 	$sth->execute ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$packets,$bytes,$type,$uftime);
-    }    
+    }
 }
 $sth->finish;
 $dbh->disconnect;

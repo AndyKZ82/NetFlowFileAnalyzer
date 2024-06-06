@@ -18,4 +18,10 @@ Allow scripts and associate .pl with CGI.
 
 AddHandler cgi-script .cgi .pl
 
+Perl
 
+Need module Net::IP::Match::Regexp
+Install:
+
+perl -MCPAN -e shell
+install Net::IP::Match::Regexp
