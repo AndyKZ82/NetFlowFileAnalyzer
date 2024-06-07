@@ -18,14 +18,21 @@ my $fcat = "/usr/local/bin/flow-cat";
 my $fprint = "/usr/local/bin/flow-print";
 my $iface = "test";
 my $type = 0;
+my $show_messages = 1; #show messages
+my $use_debug = 1; #more info
 my $local_ips = create_iprange_regexp(
-    qw( 192.168.36.0/24 84.54.5.29)
+#    qw( 192.168.36.0/24 84.54.5.29)
+    qw( 192.168.37.0/24 172.22.201.98)
 );
-my $ip_router = "84.54.5.29";
+#my $ip_router = "84.54.5.29";
+my $ip_router = "172.22.201.98";
 my @service_ports = (22,25,80,443,10022,8291,8080,8081,8082,8083,500,4500,1701);
 ##########################
 ##########################
 
+if ($use_debug) {
+    $start_tm = time();
+}
 $lt = localtime;
 $year = $lt->year;
 $month = sprintf("%02d",$lt->mon);
@@ -56,8 +63,20 @@ while (@flows) {
     $uftime = $ftime->datetime;
     &parse_log_file;
     &check_in_mysql;
+    if ($show_messages) {
+	print $frow;
+    }
     &insert_comb_data_db;
 #    &insert_data_db;
+    if ($show_messages) {
+	print ".....done!";
+	if ($use_debug) {
+	    $curr_tm = time();
+	    $diff_tm = ($curr_tm - $start_tm);
+	    print " ",$diff_tm," sec";
+	}
+	print "\n";
+    }
 }
 
 sub check_in_mysql {
@@ -84,7 +103,9 @@ while (@dbtables) {
     }
 }
 if ($crt_tbl eq "yes") {
-    print "Create Table\n";
+    if ($show_messages) {
+	print "Create Table\n";
+    }
     &crt_table_log;
 }
 $sth->finish;
