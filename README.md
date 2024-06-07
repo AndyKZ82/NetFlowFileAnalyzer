@@ -32,6 +32,7 @@ The distribution of AWStats package includes the following files:
 	README.md                           This file
  	docs/*                              Documentation
 	netflow/awstats.pl                  THE MAIN PROGRAM (WebUI, CGI)
+ 	netflow/images/*		    WebUI images
  	tools/load2sql.pl                   Script to load data from files to MySQL
 
 ## INSTALL, SETUP AND USE AWSTATS
