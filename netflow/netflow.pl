@@ -10,8 +10,8 @@ my $dbuser = "flowtools";
 my $dbpass = "7ii48aws";
 my $forma = new CGI;
 my $in = $forma->param("pg");
-my $sql_req = $forma->param("sql_req_proc");
-my $name_src_ip = $forma->param("sql_src_ip");
+my $proc_sql_req = $forma->param("proc_sql_req");
+my $sql_req_src_ip = $forma->param("sql_req_src_ip");
 my $sql_table = "test_2024_06";
 my $sql_req_limit = 100;
 my $sql_tmp_ip = "192.168.37.10";
@@ -117,7 +117,7 @@ print qq~
   <tbody>
   <tr>
     <td>Source IP (src_ip)</td>
-    <td><input name=sql_src_ip type=text value=$name_src_ip></td>
+    <td><input name=sql_req_src_ip type=text value=$sql_req_src_ip></td>
     <td>Destination IP (dst_ip)</td>
     <td>Input form</td>
   </tr>
@@ -132,21 +132,25 @@ print qq~
   </tr>
   </tbody>
   </table>
-  <input type=hidden name=sql_req_proc value=start>
+  <input type=hidden name=proc_sql_req value=start>
   <input type=hidden name=pg value=sql_req>
 ~;
 
-if ($sql_req eq 'start') {
-    &sql_sql_req;
+if ($proc_sql_req eq 'start') {
+    &do_sql_req;
 }
 }
 
-sub sql_sql_req {
+sub do_sql_req {
     $dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
     or &error_connection;
-    $sql_select = "SELECT INET_NTOA(src_ip),src_port,INET_NTOA(dst_ip),dst_port,proto,packets,bytes,type,utime from $sql_table where src_ip=INET_ATON(?) limit $sql_req_limit";
+    $sql_select = "SELECT INET_NTOA(src_ip),src_port,INET_NTOA(dst_ip),dst_port,proto,packets,bytes,type,utime from $sql_table";
+    # where src_ip=INET_ATON(?) limit $sql_req_limit";
+    if ($sql_req_src_ip ne '') {
+	$sql_select=$sql_select." where src_ip=INET_ATON('$sql_req_src_ip')";
+    }
     $sth = $dbh->prepare($sql_select);
-    $sth->execute ($name_src_ip);
+    $sth->execute ();
     $i = 0;
     while (@row = $sth->fetchrow_array) {
 	$i++;
