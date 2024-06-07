@@ -1,5 +1,11 @@
 #!/usr/bin/perl
 
+use CGI qw/:standard/;
+use Switch;
+
+$forma = new CGI;
+$in = $forma->param("pg");
+
 #header
 
 print qq~
@@ -50,18 +56,24 @@ body {
 <body>
 
 <div class="sidenav">
-  <img src="image/logo_120x120.jpg">
+  <a href="."><img src="image/logo_120x120.jpg"></a>
   <br>
-  <a href="#sql_req">SQL request</a>
-  <a href="#top_in">Top IN</a>
-  <a href="#top_out">Top OUT</a>
-  <a href="#options">Options</a>
+  <a href="?pg=sql_req">SQL request</a>
+  <a href="?pg=top_in">Top IN</a>
+  <a href="?pg=top_out">Top OUT</a>
+  <a href="?pg=options">Options</a>
 </div>
 
 <div class="main">
 ~;
 
-&pg_main;
+switch($in) {
+    case "sql_req"	{&pg_sql_req}
+    case "top_in"	{&pg_top_in}
+    case "top_out"	{&pg_top_out}
+    case "options"	{&pg_options}
+    else	{&pg_main}
+}
 
 #footer
 
@@ -83,5 +95,31 @@ print qq~
   <p>Some text to enable scrolling.. Lorem ipsum dolor sit amet, illum definitiones no quo, maluisset concludaturque et eum, altera fabulas ut quo. Atqui causae gloriatur ius te, id agam omnis evertitur eum. Affert laboramus repudiandae nec et. Inciderint efficiantur his ad. Eum no molestiae voluptatibus.</p>
   <p>Some text to enable scrolling.. Lorem ipsum dolor sit amet, illum definitiones no quo, maluisset concludaturque et eum, altera fabulas ut quo. Atqui causae gloriatur ius te, id agam omnis evertitur eum. Affert laboramus repudiandae nec et. Inciderint efficiantur his ad. Eum no molestiae voluptatibus.</p>
   <p>Some text to enable scrolling.. Lorem ipsum dolor sit amet, illum definitiones no quo, maluisset concludaturque et eum, altera fabulas ut quo. Atqui causae gloriatur ius te, id agam omnis evertitur eum. Affert laboramus repudiandae nec et. Inciderint efficiantur his ad. Eum no molestiae voluptatibus.</p>
+~;
+}
+
+sub pg_sql_req {
+
+print qq~
+  <h2>SQL REQ</h2>
+~;
+}
+
+sub pg_top_in {
+
+print qq~
+  <h2>TOP IN</h2>
+~;
+}
+sub pg_top_out {
+
+print qq~
+  <h2>TOP OUT</h2>
+~;
+}
+sub pg_options {
+
+print qq~
+  <h2>OPTIONS</h2>
 ~;
 }

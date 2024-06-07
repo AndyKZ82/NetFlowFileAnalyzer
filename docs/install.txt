@@ -20,8 +20,9 @@ AddHandler cgi-script .cgi .pl
 
 Perl
 
-Need module Net::IP::Match::Regexp
+Need modules Net::IP::Match::Regexp,Switch
 Install:
 
 perl -MCPAN -e shell
 install Net::IP::Match::Regexp
+install Switch
