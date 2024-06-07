@@ -1,10 +1,20 @@
 #!/usr/bin/perl
 
+use DBI;
 use CGI qw/:standard/;
 use Switch;
 
-$forma = new CGI;
-$in = $forma->param("pg");
+my $serverdb = "localhost";
+my $dbname = "netflow";
+my $dbuser = "flowtools";
+my $dbpass = "7ii48aws";
+my $forma = new CGI;
+my $in = $forma->param("pg");
+my $sql_req = $forma->param("sql_req_proc");
+my $name_src_ip = $forma->param("sql_src_ip");
+my $sql_table = "test_2024_06";
+my $sql_req_limit = 100;
+my $sql_tmp_ip = "192.168.37.10";
 
 #header
 
@@ -102,7 +112,90 @@ sub pg_sql_req {
 
 print qq~
   <h2>SQL REQ</h2>
+  <form action=netflow.pl method=post>
+  <table border="2">
+  <tbody>
+  <tr>
+    <td>Source IP (src_ip)</td>
+    <td><input name=sql_src_ip type=text value=$name_src_ip></td>
+    <td>Destination IP (dst_ip)</td>
+    <td>Input form</td>
+  </tr>
+  <tr>
+    <td>Source port (src_port)</td>
+    <td>Input form</td>
+    <td>Destination port (dst_port)</td>
+    <td>Input form</td>
+  </tr>
+  <tr>
+    <td colspan="4" align="center"><input name="s_button" type="submit"></td>
+  </tr>
+  </tbody>
+  </table>
+  <input type=hidden name=sql_req_proc value=start>
+  <input type=hidden name=pg value=sql_req>
 ~;
+
+if ($sql_req eq 'start') {
+    &sql_sql_req;
+}
+}
+
+sub sql_sql_req {
+    $dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
+    or &error_connection;
+    $sql_select = "SELECT INET_NTOA(src_ip),src_port,INET_NTOA(dst_ip),dst_port,proto,packets,bytes,type,utime from $sql_table where src_ip=INET_ATON(?) limit $sql_req_limit";
+    $sth = $dbh->prepare($sql_select);
+    $sth->execute ($name_src_ip);
+    $i = 0;
+    while (@row = $sth->fetchrow_array) {
+	$i++;
+	@sql_src_ip[$i] = @row[0];
+	@sql_src_port[$i] = @row[1];
+	@sql_dst_ip[$i] = @row[2];
+	@sql_dst_port[$i] = @row[3];
+	@sql_proto[$i] = @row[4];
+	@sql_packets[$i] = @row[5];
+	@sql_bytes[$i] = @row[6];
+	@sql_type[$i] = @row[7];
+	@sql_utime[$i] = @row[8];
+    }
+    $sth->finish;
+    $dbh->disconnect;
+    print qq~
+      <table border=1>
+      <tbody>
+      <tr>
+        <td>src_ip</td>
+        <td>src_port</td>
+        <td>dst_ip</td>
+        <td>dst_port</td>
+        <td>proto</td>
+        <td>packets</td>
+        <td>bytes</td>
+        <td>type</td>
+        <td>utime</td>
+      </tr>
+    ~;
+    $i1 = $i;
+    $i = 1;
+    while ($i1 > 0) {
+	print "<tr>\n";
+        print "<td>@sql_src_ip[$i]</td>\n";
+        print "<td>@sql_src_port[$i]</td>\n";
+        print "<td>@sql_dst_ip[$i]</td>\n";
+        print "<td>@sql_dst_port[$i]</td>\n";
+        print "<td>@sql_proto[$i]</td>\n";
+        print "<td>@sql_bytes[$i]</td>\n";
+        print "<td>@sql_packets[$i]</td>\n";
+        print "<td>@sql_type[$i]</td>\n";
+        print "<td>@sql_utime[$i]</td>\n";
+        print "</tr>\n";
+        $i++;
+        $i1--;
+    }
+    print "</tbody>\n";
+    print "</table>\n";
 }
 
 sub pg_top_in {
@@ -122,4 +215,16 @@ sub pg_options {
 print qq~
   <h2>OPTIONS</h2>
 ~;
+}
+
+sub error_connection {
+
+print "Error.\n";
+foreach $line_arr(@flowfile_arr_in) {
+    open (DUMPFILE, ">>$flowfile_log");
+    $line_arr = "$line_arr\n";
+    print DUMPFILE $line_arr;
+    close (DUMPFILE);
+}
+die "\n";
 }
