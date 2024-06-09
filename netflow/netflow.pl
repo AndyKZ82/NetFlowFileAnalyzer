@@ -13,6 +13,8 @@ my $in = $forma->param("pg");
 my $proc_sql_req = $forma->param("proc_sql_req");
 my $sql_req_src_ip = $forma->param("sql_req_src_ip");
 my $sql_req_dst_ip = $forma->param("sql_req_dst_ip");
+my $sql_req_src_port = $forma->param("sql_req_src_port");
+my $sql_req_dst_port = $forma->param("sql_req_dst_port");
 my $sql_table = "test_2024_06";
 my $sql_req_limit = 100;
 my $sql_tmp_ip = "192.168.37.10";
@@ -124,9 +126,9 @@ print qq~
   </tr>
   <tr>
     <td>Source port (src_port)</td>
-    <td>Input form</td>
+    <td><input name=sql_req_src_port type=text value=$sql_req_src_port></td>
     <td>Destination port (dst_port)</td>
-    <td>Input form</td>
+    <td><input name=sql_req_dst_port type=text value=$sql_req_dst_port></td>
   </tr>
   <tr>
     <td colspan="4" align="center"><input name="s_button" type="submit"></td>
@@ -154,6 +156,12 @@ sub do_sql_req {
     if ($sql_req_dst_ip ne '') {
 	$w = 1;
     }
+    if ($sql_req_src_port ne '') {
+	$w = 1;
+    }
+    if ($sql_req_dst_port ne '') {
+	$w = 1;
+    }
     if ($w eq 1) {
 	$sql_select = $sql_select." where";
     }
@@ -168,8 +176,22 @@ sub do_sql_req {
 	$sql_select = $sql_select." dst_ip=INET_ATON('$sql_req_dst_ip')";
 	$a = 1;
     }
+    if ($sql_req_src_port ne '') {
+	if ($a eq 1) {
+	    $sql_select = $sql_select." and";
+	}
+	$sql_select = $sql_select." src_port=$sql_req_src_port";
+	$a = 1;
+    }
+    if ($sql_req_dst_port ne '') {
+	if ($a eq 1) {
+	    $sql_select = $sql_select." and";
+	}
+	$sql_select = $sql_select." dst_port=$sql_req_dst_port";
+	$a = 1;
+    }
     $sql_select = $sql_select." limit $sql_req_limit";
-    #print $sql_select,"\n"; #debug
+#    print $sql_select,"\n"; #debug
     $sth = $dbh->prepare($sql_select);
     $sth->execute ();
     $i = 0;
