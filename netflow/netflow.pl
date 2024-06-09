@@ -12,6 +12,7 @@ my $forma = new CGI;
 my $in = $forma->param("pg");
 my $proc_sql_req = $forma->param("proc_sql_req");
 my $sql_req_src_ip = $forma->param("sql_req_src_ip");
+my $sql_req_dst_ip = $forma->param("sql_req_dst_ip");
 my $sql_table = "test_2024_06";
 my $sql_req_limit = 100;
 my $sql_tmp_ip = "192.168.37.10";
@@ -119,7 +120,7 @@ print qq~
     <td>Source IP (src_ip)</td>
     <td><input name=sql_req_src_ip type=text value=$sql_req_src_ip></td>
     <td>Destination IP (dst_ip)</td>
-    <td>Input form</td>
+    <td><input name=sql_req_dst_ip type=text value=$sql_req_dst_ip></td>
   </tr>
   <tr>
     <td>Source port (src_port)</td>
@@ -145,10 +146,30 @@ sub do_sql_req {
     $dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
     or &error_connection;
     $sql_select = "SELECT INET_NTOA(src_ip),src_port,INET_NTOA(dst_ip),dst_port,proto,packets,bytes,type,utime from $sql_table";
-    # where src_ip=INET_ATON(?) limit $sql_req_limit";
+    $w = 0;
+    $a = 0;
     if ($sql_req_src_ip ne '') {
-	$sql_select=$sql_select." where src_ip=INET_ATON('$sql_req_src_ip')";
+	$w = 1;
     }
+    if ($sql_req_dst_ip ne '') {
+	$w = 1;
+    }
+    if ($w eq 1) {
+	$sql_select = $sql_select." where";
+    }
+    if ($sql_req_src_ip ne '') {
+	$sql_select = $sql_select." src_ip=INET_ATON('$sql_req_src_ip')";
+	$a = 1;
+    }
+    if ($sql_req_dst_ip ne '') {
+	if ($a eq 1) {
+	    $sql_select = $sql_select." and";
+	}
+	$sql_select = $sql_select." dst_ip=INET_ATON('$sql_req_dst_ip')";
+	$a = 1;
+    }
+    $sql_select = $sql_select." limit $sql_req_limit";
+    #print $sql_select,"\n"; #debug
     $sth = $dbh->prepare($sql_select);
     $sth->execute ();
     $i = 0;
@@ -190,8 +211,8 @@ sub do_sql_req {
         print "<td>@sql_dst_ip[$i]</td>\n";
         print "<td>@sql_dst_port[$i]</td>\n";
         print "<td>@sql_proto[$i]</td>\n";
-        print "<td>@sql_bytes[$i]</td>\n";
         print "<td>@sql_packets[$i]</td>\n";
+        print "<td>@sql_bytes[$i]</td>\n";
         print "<td>@sql_type[$i]</td>\n";
         print "<td>@sql_utime[$i]</td>\n";
         print "</tr>\n";
