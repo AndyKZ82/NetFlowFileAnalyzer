@@ -15,6 +15,21 @@ my $sql_req_src_ip = $forma->param("sql_req_src_ip");
 my $sql_req_dst_ip = $forma->param("sql_req_dst_ip");
 my $sql_req_src_port = $forma->param("sql_req_src_port");
 my $sql_req_dst_port = $forma->param("sql_req_dst_port");
+my $sql_req_date_from = $forma->param("sql_req_date_from");
+my $sql_req_date_to = $forma->param("sql_req_date_to");
+my $sql_req_time_from = $forma->param("sql_req_time_from");
+my $sql_req_time_to = $forma->param("sql_req_time_to");
+if ($sql_req_date_from ne '') {
+    if ($sql_req_time_from eq '') {
+	$sql_req_time_from = "00:00:00";
+    }
+    if ($sql_req_date_to eq '') {
+	$sql_req_date_to = $sql_req_date_from;
+    }
+    if ($sql_req_time_to eq '') {
+	$sql_req_time_to = "23:59:59";
+    }
+}
 my $sql_table = "test_2024_06";
 my $sql_req_limit = 100;
 my $sql_tmp_ip = "192.168.37.10";
@@ -112,7 +127,6 @@ print qq~
 }
 
 sub pg_sql_req {
-
 print qq~
   <h2>SQL REQ</h2>
   <form action=netflow.pl method=post>
@@ -129,6 +143,18 @@ print qq~
     <td><input name=sql_req_src_port type=text value=$sql_req_src_port></td>
     <td>Destination port (dst_port)</td>
     <td><input name=sql_req_dst_port type=text value=$sql_req_dst_port></td>
+  </tr>
+  <tr>
+    <td>Date from</td>
+    <td><input name=sql_req_date_from type=text value=$sql_req_date_from></td>
+    <td>Date to</td>
+    <td><input name=sql_req_date_to type=text value=$sql_req_date_to></td>
+  </tr>
+  <tr>
+    <td>Time from</td>
+    <td><input name=sql_req_time_from type=text value=$sql_req_time_from></td>
+    <td>Time to</td>
+    <td><input name=sql_req_time_to type=text value=$sql_req_time_to></td>
   </tr>
   <tr>
     <td colspan="4" align="center"><input name="s_button" type="submit"></td>
@@ -162,6 +188,9 @@ sub do_sql_req {
     if ($sql_req_dst_port ne '') {
 	$w = 1;
     }
+    if ($sql_req_date_from ne '') {
+	$w = 1;
+    }
     if ($w eq 1) {
 	$sql_select = $sql_select." where";
     }
@@ -188,6 +217,17 @@ sub do_sql_req {
 	    $sql_select = $sql_select." and";
 	}
 	$sql_select = $sql_select." dst_port=$sql_req_dst_port";
+	$a = 1;
+    }
+    if ($sql_req_date_from ne '') {
+	if ($a eq 1) {
+	    $sql_select = $sql_select." and";
+	}
+	$sql_f_df = $sql_req_date_from.$sql_req_time_from;
+	$sql_f_df =~ s/[-:]//g;
+	$sql_f_dt = $sql_req_date_to.$sql_req_time_to;
+	$sql_f_dt =~ s/[-:]//g;
+	$sql_select = $sql_select." utime between $sql_f_df and $sql_f_dt";
 	$a = 1;
     }
     $sql_select = $sql_select." limit $sql_req_limit";

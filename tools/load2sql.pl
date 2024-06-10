@@ -81,7 +81,7 @@ while (@flows) {
 
 sub check_in_mysql {
 
-my ($dbh,$sth,$count);
+#my ($dbh,$sth,$count);
 $dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
     or &error_connection;
 $sth = $dbh->prepare("SHOW tables");
@@ -186,7 +186,10 @@ while (@flowfile_arr_in) {
 	    $dst_port = 0;
 	} else {
 	    $type = 1;
-	    $src_port = 0;
+	    #torrents
+	    if ($src_port ne "6881") {
+		$src_port = 0;
+	    }
 	}
         $check = "SELECT EXISTS (SELECT * from $table_name where src_ip=INET_ATON(?) and src_port=? and dst_ip=INET_ATON(?) and dst_port=? and proto=? and type=? and utime=?)";
         $sth = $dbh->prepare("$check");
