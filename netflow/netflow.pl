@@ -30,6 +30,7 @@ if ($sql_req_date_from ne '') {
 	$sql_req_time_to = "23:59:59";
     }
 }
+my $sql_req_proto = $forma->param("sql_req_proto");
 my $sql_table = "test_2024_06";
 my $sql_req_limit = 100;
 my $sql_tmp_ip = "192.168.37.10";
@@ -157,6 +158,12 @@ print qq~
     <td><input name=sql_req_time_to type=text value=$sql_req_time_to></td>
   </tr>
   <tr>
+    <td>Protocol</td>
+    <td><input name=sql_req_proto type=text value=$sql_req_proto></td>
+    <td>Traffic summ</td>
+    <td>To be here</td>
+  </tr>
+  <tr>
     <td colspan="4" align="center"><input name="s_button" type="submit"></td>
   </tr>
   </tbody>
@@ -188,6 +195,9 @@ sub do_sql_req {
     if ($sql_req_dst_port ne '') {
 	$w = 1;
     }
+    if ($sql_req_proto ne '') {
+	$w = 1;
+    }
     if ($sql_req_date_from ne '') {
 	$w = 1;
     }
@@ -205,18 +215,11 @@ sub do_sql_req {
 	$sql_select = $sql_select." dst_ip=INET_ATON('$sql_req_dst_ip')";
 	$a = 1;
     }
-    if ($sql_req_src_port ne '') {
+    if ($sql_req_proto ne '') {
 	if ($a eq 1) {
 	    $sql_select = $sql_select." and";
 	}
-	$sql_select = $sql_select." src_port=$sql_req_src_port";
-	$a = 1;
-    }
-    if ($sql_req_dst_port ne '') {
-	if ($a eq 1) {
-	    $sql_select = $sql_select." and";
-	}
-	$sql_select = $sql_select." dst_port=$sql_req_dst_port";
+	$sql_select = $sql_select." proto=$sql_req_proto";
 	$a = 1;
     }
     if ($sql_req_date_from ne '') {
