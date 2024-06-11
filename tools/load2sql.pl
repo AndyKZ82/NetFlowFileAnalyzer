@@ -3,6 +3,7 @@
 use DBI;
 use Time::Piece;
 use Net::IP::Match::Regexp qw( create_iprange_regexp match_ip );
+use Term::ANSIColor qw(:constants);
 
 #########################
 #########################
@@ -69,7 +70,7 @@ while (@flows) {
     &insert_comb_data_db;
 #    &insert_data_db;
     if ($show_messages) {
-	print ".....done!";
+	print GREEN, ".....done!", RESET;
 	if ($use_debug) {
 	    $curr_tm = time();
 	    $diff_tm = ($curr_tm - $start_tm);
@@ -191,7 +192,7 @@ while (@flowfile_arr_in) {
 		$src_port = 0;
 	    }
 	}
-        $check = "SELECT EXISTS (SELECT * from $table_name where src_ip=INET_ATON(?) and src_port=? and dst_ip=INET_ATON(?) and dst_port=? and proto=? and type=? and utime=?)";
+        $check = "SELECT EXISTS (SELECT * from $table_name where src_ip=INET_ATON(?) and src_port=? and dst_ip=INET_ATON(?) and dst_port=? and proto=? and type=? and utime=? limit 1)";
         $sth = $dbh->prepare("$check");
         $sth->execute ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$type,$uftime);
         @row = $sth->fetchrow_array;
