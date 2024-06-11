@@ -22,12 +22,14 @@ my $type = 0;
 my $show_messages = 1; #show messages
 my $use_debug = 1; #more info
 my $local_ips = create_iprange_regexp(
-#    qw( 192.168.36.0/24 84.54.5.29)
-    qw( 192.168.37.0/24 172.22.201.98)
+    qw( 192.168.36.0/24 84.54.5.29)
+#    qw( 192.168.37.0/24 172.22.201.98)
 );
-#my $ip_router = "84.54.5.29";
-my $ip_router = "172.22.201.98";
-my @service_ports = (22,25,80,443,10022,8291,8080,8081,8082,8083,500,4500,1701);
+my $ip_router = "84.54.5.29";
+#my $ip_router = "172.22.201.98";
+my @app_ports = (22,25,80,443,625,10022,8081,8082,8083);
+my @service_ports = (53,123,161,500,1700,4500,8080);
+my @torrent_ports = (6881,6882,6883,6884,6885,6886,6887,6888,6889);
 ##########################
 ##########################
 
@@ -66,6 +68,12 @@ while (@flows) {
     &check_in_mysql;
     if ($show_messages) {
 	print $frow;
+    }
+    if ($parse_file_empty) {
+	if ($show_messages) {
+    	    print RED, "....empty!\n", RESET;
+    	}
+	next;
     }
     &insert_comb_data_db;
 #    &insert_data_db;
@@ -182,13 +190,23 @@ while (@flowfile_arr_in) {
         $bytes="0";
     }
     if (match_ip($src_ip, $local_ips)) {
-	if ( grep( /^$src_port$/, @service_ports ) ) {
+	if ($src_ip eq $ip_router) {
+	    if (grep ( /^$src_port$/, @service_ports ) ) {
+		$type = 5;
+		$dst_port = 0;
+	    } else {
+		$type = 5;
+		$src_port = 0;
+	    }
+	} elsif ( grep( /^$src_port$/, @app_ports ) ) {
 	    $type = 3;
 	    $dst_port = 0;
 	} else {
 	    $type = 1;
-	    #torrents
-	    if ($src_port ne "6881") {
+	    if ( grep( /^$src_port$/, @torrent_ports ) ) {
+		$dst_port = 0;
+		$dst_ip = "0.0.0.0";
+	    } else {
 		$src_port = 0;
 	    }
 	}
@@ -205,15 +223,22 @@ while (@flowfile_arr_in) {
     	    $sth->execute ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$packets,$bytes,$type,$uftime);
 	}
     } elsif (match_ip($dst_ip, $local_ips)) {
-	if ( grep( /^$dst_port$/, @service_ports ) ) {
+	if ($dst_ip eq $ip_router) {
+	    $type = 6;
+	    if (grep ( /^$dst_port$/, @service_ports ) ) {
+		$src_port = 0;
+	    } elsif ($dst_port > 20000) {
+		$dst_port = 0;
+	    }
+	} elsif  ( grep( /^$dst_port$/, @app_ports ) ) {
 	    $type = 4;
 	    $src_port = 0;
 	} else {
-	    if (($dst_ip eq $ip_router) and ($dst_port < 20000)) {
-		$type = 5;
+	    $type = 2;
+	    if ( grep ( /^$dst_port$/, @torrent_ports ) ) {
+		$src_ip = "0.0.0.0";
 		$src_port = 0;
 	    } else {
-		$type = 2;
 		$dst_port = 0;
 	    }
 	}
@@ -241,12 +266,16 @@ $dbh->disconnect;
 
 sub parse_log_file {
 open (PARSFILE, "$flowfile_log");
+$parse_file_empty = 0;
 while ($line_parse=<PARSFILE>) {
     chomp $line_parse;
     $line_parse =~ s/[\s\t]+/\t/g;
     push @flowfile_arr_in, $line_parse;
 }
 close (PARSFILE);
+if ( -z $flowfile_log ) {
+    $parse_file_empty = 1;
+}
 truncate ("$flowfile_log",0);
 }
 
