@@ -26,3 +26,9 @@ Install:
 perl -MCPAN -e shell
 install Net::IP::Match::Regexp
 install Switch
+
+SQL
+
+Create table
+
+create table ifaces (id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT, iface CHAR(30) NOT NULL, PRIMARY KEY (id));
