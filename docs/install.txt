@@ -27,8 +27,16 @@ perl -MCPAN -e shell
 install Net::IP::Match::Regexp
 install Switch
 
-SQL
+MySQL
 
-Create table
+Create database:
+
+shell> mysql -uroot -p<пароль>
+mysql> CREATE DATABASE netflow CHARACTER SET utf8 COLLATE utf8_bin;
+mysql> CREATE USER 'netflow'@'localhost' IDENTIFIED BY 'password';
+mysql> GRANT ALL PRIVILEGES ON netflow.* TO 'netflow'@'localhost';
+mysql> quit;
+
+Create tables:
 
 create table ifaces (id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT, iface CHAR(30) NOT NULL, PRIMARY KEY (id));
