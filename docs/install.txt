@@ -24,6 +24,7 @@ Need modules Net::IP::Match::Regexp,Switch
 Install:
 
 perl -MCPAN -e shell
+install DBD::mysql
 install Net::IP::Match::Regexp
 install Switch
 
