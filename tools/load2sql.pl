@@ -40,7 +40,6 @@ my $start_tm; #start time
 my $lt = localtime;
 my $year = $lt->year;
 my $month = sprintf("%02d",$lt->mon);
-my $mday = sprintf("%02d",$lt->mday); #2tmp
 my $table_name = "$iface\_$year\_$month";
 
 my $flowpath;
@@ -53,8 +52,8 @@ if ($use_debug) {
     $start_tm = time(); #script start time
 }
 
-$flowpath = "/var/flow/$iface/$year-$month/$year-$month-$mday"; #flow-capture -N-2
-$flowfile = "ft-v05."."*";
+$flowpath = "/var/flow/$iface/*/*"; #flow-capture -N-2
+$flowfile = "ft-v05.*";
 
 my @flow_files = `ls $flowpath/$flowfile`;
 
@@ -63,7 +62,7 @@ while (@flow_files) {
     chomp($ff_row);
     system "$fcat $ff_row \| $fprint \| grep -v 'prot' > $flowfile_log";
     $fname = $ff_row;
-    $fname =~ s/$flowpath\///;
+    $fname =~ s/^.*ft-v05/ft-v05/;
     $ftime = Time::Piece->strptime($fname, 'ft-v05.%Y-%m-%d.%H%M%S+0700');
 #        $ftime = Time::Piece->strptime($fname, 'ft-v05.%Y-%m-%d.%H%M%S%z'); with timezone
     $uftime = $ftime->datetime;
