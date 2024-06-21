@@ -16,7 +16,7 @@ my $dbpass = "7ii48aws";
 my $flowfile_log = "/tmp/load2sql.log";
 my @dbtables; #list of tables in DB
 my @dbfiles; #list of loaded files in DB
-my @flowfile_arr_in;
+my @flowfile_arr; #str from current file
 
 my $fcat = "/usr/local/bin/flow-cat"; #path to flow-cat
 my $fprint = "/usr/local/bin/flow-print"; #path to flow-print
@@ -38,14 +38,12 @@ my @torrent_ports = (6881,6882,6883,6884,6885,6886,6887,6888,6889);
 ##########################
 ##########################
 my $start_tm; #start time
-my $lt = localtime;
-my $year = $lt->year;
-my $month = sprintf("%02d",$lt->mon);
-my $table_name = "$iface\_$year\_$month";
+my $table_name = "none1";
+my $curr_table_name = "none2";
 
 my $flowpath;
 my $flowfile;
-my ($ff_row,$fname,$ftime,$uftime); #current file attrib - pathfile,file,time,formatted time
+my ($ff_row,$fname,$ftime,$uftime,$ufyear,$ufmonth); #current file attrib - pathfile,file,time,formatted time
 my ($parse_file_empty); #current file status
 my ($dbh,$sth); #DBI vars
 
@@ -79,18 +77,24 @@ while (@flow_files) {
 	next;
     }
     system "$fcat $ff_row \| $fprint \| grep -v 'prot' > $flowfile_log";
-    $fname = $ff_row;
-    $fname =~ s/^.*ft-v05/ft-v05/;
-    $ftime = Time::Piece->strptime($fname, 'ft-v05.%Y-%m-%d.%H%M%S+0700');
-#        $ftime = Time::Piece->strptime($fname, 'ft-v05.%Y-%m-%d.%H%M%S%z'); with timezone
-    $uftime = $ftime->datetime;
     &parse_log_file;
-    &check_in_mysql;
     if ($parse_file_empty) {
 	if ($show_messages) {
     	    print RED, "....empty!\n", RESET;
     	}
 	next;
+    }
+    $fname = $ff_row;
+    $fname =~ s/^.*ft-v05/ft-v05/;
+    $ftime = Time::Piece->strptime($fname, 'ft-v05.%Y-%m-%d.%H%M%S+0700');
+#        $ftime = Time::Piece->strptime($fname, 'ft-v05.%Y-%m-%d.%H%M%S%z'); with timezone
+    $uftime = $ftime->datetime;
+    $ufyear = $ftime->year;
+    $ufmonth = sprintf("%02d",$ftime->mon);
+    $curr_table_name = "$iface\_$ufyear\_$ufmonth";
+    if ($curr_table_name ne $table_name) {
+	$table_name = $curr_table_name;
+	&check_in_mysql;
     }
     &insert_comb_data_db;
 #    &insert_data_db;
@@ -109,8 +113,8 @@ sub load_mysql_info {
 
 $dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
     or &error_connection;
-my $loadinfo = "select file from $ftable_name where iface_id=$iface_id and archived='0'";
-$sth = $dbh->prepare($loadinfo);
+my $loadfileinfo = "select file from $ftable_name where iface_id=$iface_id and archived='0'";
+$sth = $dbh->prepare($loadfileinfo);
 $sth->execute ();
 my @row;
 my $lfile;
@@ -119,38 +123,25 @@ while (@row = $sth->fetchrow_array) {
     push @dbfiles, $lfile;
     }
 }
-#my $show = "SHOW tables";
-#$sth = $dbh->prepare($show);
-#$sth->execute ();
-#my @row;
-#my $table;
-#while (@row = $sth->fetchrow_array) {
-#    foreach $table (@row){
-#    push @dbtables, $table;
-#    }
-#}
-$sth->finish;
-$dbh->disconnect;
-}
-
-sub check_in_mysql {
-
-$dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
-    or &error_connection;
-my $show = "SHOW tables";
-$sth = $dbh->prepare($show);
+my $showtables = "SHOW tables";
+$sth = $dbh->prepare($showtables);
 $sth->execute ();
-my @row;
+@row = ();
 my $table;
 while (@row = $sth->fetchrow_array) {
     foreach $table (@row){
     push @dbtables, $table;
     }
 }
+$sth->finish;
+$dbh->disconnect;
+}
+
+sub check_in_mysql {
+
 my $crt_tbl="yes";
 my $crt_files_tbl="yes";
-while (@dbtables) {
-    $table = shift @dbtables;
+foreach my $table (@dbtables) {
     if (defined $table) {
         if ($table eq $table_name) {
     	    $crt_tbl="no";
@@ -162,7 +153,7 @@ while (@dbtables) {
 }
 if ($crt_tbl eq "yes") {
     if ($show_messages) {
-	print "Create Table $table_name\n";
+	print "\nCreate Table $table_name\n";
     }
     &crt_table_log;
 }
@@ -172,14 +163,12 @@ if ($crt_files_tbl eq "yes") {
     }
     &crt_table_load;
 }
-$sth->finish;
-$dbh->disconnect;
 }
 
 sub error_connection {
 
 print "Error.\n";
-foreach my $line_arr(@flowfile_arr_in) {
+foreach my $line_arr(@flowfile_arr) {
     open (DUMPFILE, ">>$flowfile_log");
     $line_arr = "$line_arr\n";
     print DUMPFILE $line_arr;
@@ -190,18 +179,24 @@ die "\n";
 
 sub crt_table_log {
 
-    my $create = "CREATE TABLE $table_name (src_ip INT UNSIGNED NOT NULL, src_port SMALLINT UNSIGNED DEFAULT(0) NOT NULL, dst_ip INT UNSIGNED NOT NULL, dst_port SMALLINT UNSIGNED DEFAULT(0) NOT NULL, proto TINYINT UNSIGNED, packets INT UNSIGNED DEFAULT(0), bytes BIGINT UNSIGNED DEFAULT(0), type TINYINT UNSIGNED DEFAULT(0), utime TIMESTAMP NOT NULL, INDEX(src_ip), INDEX(dst_ip), INDEX(proto), INDEX(type), INDEX(utime)) ENGINE = MyISAM";
-    $sth = $dbh->prepare($create);
-    $sth->execute ();
-    $sth->finish;
+$dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
+    or &error_connection;
+my $create = "CREATE TABLE $table_name (src_ip INT UNSIGNED NOT NULL, src_port SMALLINT UNSIGNED DEFAULT(0) NOT NULL, dst_ip INT UNSIGNED NOT NULL, dst_port SMALLINT UNSIGNED DEFAULT(0) NOT NULL, proto TINYINT UNSIGNED, packets INT UNSIGNED DEFAULT(0), bytes BIGINT UNSIGNED DEFAULT(0), type TINYINT UNSIGNED DEFAULT(0), utime TIMESTAMP NOT NULL, INDEX(src_ip), INDEX(dst_ip), INDEX(proto), INDEX(type), INDEX(utime)) ENGINE = MyISAM";
+$sth = $dbh->prepare($create);
+$sth->execute ();
+$sth->finish;
+$dbh->disconnect;
 }
 
 sub crt_table_load {
 
-    my $create = "CREATE TABLE $ftable_name (iface_id TINYINT UNSIGNED NOT NULL, file VARCHAR(255) NOT NULL, archived BOOLEAN DEFAULT(0), file_arch VARCHAR(255), load_time DATETIME, INDEX(iface_id), INDEX(archived)) ENGINE = MyISAM";
-    $sth = $dbh->prepare($create);
-    $sth->execute ();
-    $sth->finish;
+$dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
+    or &error_connection;
+my $create = "CREATE TABLE $ftable_name (iface_id TINYINT UNSIGNED NOT NULL, file VARCHAR(255) NOT NULL, archived BOOLEAN DEFAULT(0), file_arch VARCHAR(255), load_time DATETIME, INDEX(iface_id), INDEX(archived)) ENGINE = MyISAM";
+$sth = $dbh->prepare($create);
+$sth->execute ();
+$sth->finish;
+$dbh->disconnect;
 }
 
 sub insert_data_db {
@@ -211,8 +206,8 @@ $dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpa
 my ($src_ip,$src_port,$dst_ip,$dst_port,$proto,$packets,$bytes); #data values
 my $insert = "INSERT INTO $table_name (src_ip,src_port,dst_ip,dst_port,proto,packets,bytes,type,utime) VALUES (INET_ATON(?),?,INET_ATON(?),?,?,?,?,?,?)";
 $sth = $dbh->prepare($insert);
-while (@flowfile_arr_in) {
-    my $line_in = shift @flowfile_arr_in;
+while (@flowfile_arr) {
+    my $line_in = shift @flowfile_arr;
     ($src_ip,$dst_ip,$proto,$src_port,$dst_port,$bytes,$packets)=split(/[\s\t]+/,$line_in);
     if (!defined $proto){
         $proto="0";
@@ -238,8 +233,8 @@ my @row;
 my $insert = "INSERT INTO $table_name (src_ip,src_port,dst_ip,dst_port,proto,packets,bytes,type,utime) VALUES (INET_ATON(?),?,INET_ATON(?),?,?,?,?,?,?)";
 my $update = "UPDATE $table_name SET packets=packets+?, bytes=bytes+? where src_ip=INET_ATON(?) and src_port=? and dst_ip=INET_ATON(?) and dst_port=? and proto=? and type=? and utime=?";
 my $insert_is_loaded = "INSERT INTO loaded_files (iface_id,file,load_time) values (?,?,now())";
-while (@flowfile_arr_in) {
-    my $line_in = shift @flowfile_arr_in;
+while (@flowfile_arr) {
+    my $line_in = shift @flowfile_arr;
     ($src_ip,$dst_ip,$proto,$src_port,$dst_port,$bytes,$packets)=split(/[\s\t]+/,$line_in);
     if (!defined $proto){
         $proto="0";
@@ -336,11 +331,11 @@ $dbh->disconnect;
 sub parse_log_file {
 open (PARSFILE, "$flowfile_log");
 $parse_file_empty = 0;
-@flowfile_arr_in = ();
+@flowfile_arr = ();
 while (my $line_parse=<PARSFILE>) {
     chomp $line_parse;
     $line_parse =~ s/[\s\t]+/\t/g;
-    push @flowfile_arr_in, $line_parse;
+    push @flowfile_arr, $line_parse;
 }
 close (PARSFILE);
 if ( -z $flowfile_log ) {
