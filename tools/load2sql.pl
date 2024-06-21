@@ -15,13 +15,14 @@ my $dbuser = "flowtools";
 my $dbpass = "7ii48aws";
 my $flowfile_log = "/tmp/load2sql.log";
 my @dbtables; #list of tables in DB
+my @dbfiles; #list of loaded files in DB
 my @flowfile_arr_in;
 
 my $fcat = "/usr/local/bin/flow-cat"; #path to flow-cat
 my $fprint = "/usr/local/bin/flow-print"; #path to flow-print
 my $ftable_name = "loaded_files"; #db for loaded files info
 my $iface = "test"; #iface name (folder)
-my $iface_id = 3; #iface id (in db)
+my $iface_id = 3; #iface id (in db) ln17rb - 1, p5rb - 2, test - 3
 my $type = 0;
 my $show_messages = 1; #show messages
 my $use_debug = 1; #more info
@@ -45,7 +46,7 @@ my $table_name = "$iface\_$year\_$month";
 my $flowpath;
 my $flowfile;
 my ($ff_row,$fname,$ftime,$uftime); #current file attrib - pathfile,file,time,formatted time
-my ($parse_file_empty,$file_is_loaded); #current file status
+my ($parse_file_empty); #current file status
 my ($dbh,$sth); #DBI vars
 
 if ($use_debug) {
@@ -57,9 +58,26 @@ $flowfile = "ft-v05.*";
 
 my @flow_files = `ls $flowpath/$flowfile`;
 
+if (scalar @flow_files eq 0) {
+    print "Nothing to load from ";
+    print RED, "/var/flow/$iface\n", RESET;
+    exit(0);
+}
+
+&load_mysql_info;
+
 while (@flow_files) {
     $ff_row = shift @flow_files;
     chomp($ff_row);
+    if ($show_messages) {
+	print $ff_row;
+    }
+    if (grep ( /\Q$ff_row/, @dbfiles ) ) {
+	if ($show_messages) {
+    	    print YELLOW, "....pass!\n", RESET;
+    	}
+	next;
+    }
     system "$fcat $ff_row \| $fprint \| grep -v 'prot' > $flowfile_log";
     $fname = $ff_row;
     $fname =~ s/^.*ft-v05/ft-v05/;
@@ -68,18 +86,9 @@ while (@flow_files) {
     $uftime = $ftime->datetime;
     &parse_log_file;
     &check_in_mysql;
-    if ($show_messages) {
-	print $ff_row;
-    }
     if ($parse_file_empty) {
 	if ($show_messages) {
     	    print RED, "....empty!\n", RESET;
-    	}
-	next;
-    }
-    if ($file_is_loaded) {
-	if ($show_messages) {
-    	    print YELLOW, "....pass!\n", RESET;
     	}
 	next;
     }
@@ -94,6 +103,34 @@ while (@flow_files) {
 	}
 	print "\n";
     }
+}
+
+sub load_mysql_info {
+
+$dbh = DBI->connect("DBI:mysql:host=$serverdb;database=$dbname","$dbuser","$dbpass")
+    or &error_connection;
+my $loadinfo = "select file from $ftable_name where iface_id=$iface_id and archived='0'";
+$sth = $dbh->prepare($loadinfo);
+$sth->execute ();
+my @row;
+my $lfile;
+while (@row = $sth->fetchrow_array) {
+    foreach $lfile (@row){
+    push @dbfiles, $lfile;
+    }
+}
+#my $show = "SHOW tables";
+#$sth = $dbh->prepare($show);
+#$sth->execute ();
+#my @row;
+#my $table;
+#while (@row = $sth->fetchrow_array) {
+#    foreach $table (@row){
+#    push @dbtables, $table;
+#    }
+#}
+$sth->finish;
+$dbh->disconnect;
 }
 
 sub check_in_mysql {
@@ -134,14 +171,6 @@ if ($crt_files_tbl eq "yes") {
 	print "Create Table $ftable_name\n";
     }
     &crt_table_load;
-}
-$file_is_loaded = 0;
-my $select_file = "SELECT Count(file) FROM $ftable_name WHERE file=?";
-$sth = $dbh->prepare($select_file);
-$sth->execute ($ff_row);
-@row = $sth->fetchrow_array;
-if ($row[0] > 0) {
-    $file_is_loaded = 1;
 }
 $sth->finish;
 $dbh->disconnect;
