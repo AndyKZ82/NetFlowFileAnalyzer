@@ -21,17 +21,17 @@ my @flowfile_arr; #str from current file
 my $fcat = "/usr/local/bin/flow-cat"; #path to flow-cat
 my $fprint = "/usr/local/bin/flow-print"; #path to flow-print
 my $ftable_name = "loaded_files"; #db for loaded files info
-my $iface = "test"; #iface name (folder)
-my $iface_id = 3; #iface id (in db) ln17rb - 1, p5rb - 2, test - 3
+my $iface = "p5rb"; #iface name (folder)
+my $iface_id = 2; #iface id (in db) ln17rb - 1, p5rb - 2, test - 3
 my $type = 0;
 my $show_messages = 1; #show messages
 my $use_debug = 1; #more info
 my $local_ips = create_iprange_regexp(
-    qw( 192.168.36.0/24 84.54.5.29)
-#    qw( 192.168.37.0/24 172.22.201.98)
+#    qw( 192.168.36.0/24 84.54.5.29)
+    qw( 192.168.37.0/24 172.22.201.98)
 );
-my $ip_router = "84.54.5.29";
-#my $ip_router = "172.22.201.98";
+#my $ip_router = "84.54.5.29";
+my $ip_router = "172.22.201.98";
 my @app_ports = (22,25,80,443,625,10022,8081,8082,8083);
 my @service_ports = (53,123,161,500,1700,4500,8080);
 my @torrent_ports = (6881,6882,6883,6884,6885,6886,6887,6888,6889);
@@ -51,10 +51,10 @@ if ($use_debug) {
     $start_tm = time(); #script start time
 }
 
-$flowpath = "/var/flow/$iface/*/*"; #flow-capture -N-2
+$flowpath = "/var/flow/$iface"; #flow-capture -N-2
 $flowfile = "ft-v05.*";
 
-my @flow_files = `ls $flowpath/$flowfile`;
+my @flow_files = `find $flowpath -type f -name $flowfile`;
 
 if (scalar @flow_files eq 0) {
     print "Nothing to load from ";
