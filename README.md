@@ -7,7 +7,7 @@ Files generated netflow-capture (package flow-tools) loads to mysql DB by script
 - License: none.
 - Version: 0
 - Release date: none
-- Platforms: All (FreeBSD 14)
+- Platforms: All (FreeBSD 14 tested)
 - Author: Andrey Kazakovtsev <andy@ntwk.ru>
 
 ## FEATURES AND REQUIREMENTS
@@ -27,15 +27,15 @@ To use NetFlowFileAnalyzer scripts, you need the following requirements:
 
 ### Files
 
-The distribution of AWStats package includes the following files:
+The distribution of NetFlowFileAnalyzer package includes the following files:
 
 	README.md                           This file
  	docs/*                              Documentation
-	netflow/awstats.pl                  THE MAIN PROGRAM (WebUI, CGI)
+	netflow/netflow.pl                  THE MAIN PROGRAM (WebUI, CGI)
  	netflow/images/*		    WebUI images
  	tools/load2sql.pl                   Script to load data from files to MySQL
 
-## INSTALL, SETUP AND USE AWSTATS
+## INSTALL, SETUP AND USE NFAnalyzer
 
 Will be here
 
