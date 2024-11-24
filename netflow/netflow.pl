@@ -31,9 +31,9 @@ if ($sql_req_date_from ne '') {
     }
 }
 my $sql_req_proto = $forma->param("sql_req_proto");
-my $sql_table = "test_2024_06";
+my $sql_table = "p5rb_2024_10";
 my $sql_req_limit = 100;
-my $sql_tmp_ip = "192.168.37.10";
+#my $sql_tmp_ip = "192.168.37.10";
 
 #header
 
@@ -215,6 +215,20 @@ sub do_sql_req {
 	$sql_select = $sql_select." dst_ip=INET_ATON('$sql_req_dst_ip')";
 	$a = 1;
     }
+    if ($sql_req_src_port ne '') {
+	if ($a eq 1) {
+	    $sql_select = $sql_select." and";
+	}
+	$sql_select = $sql_select." src_port=$sql_req_src_port";
+	$a = 1;
+    }
+    if ($sql_req_dst_port ne '') {
+	if ($a eq 1) {
+	    $sql_select = $sql_select." and";
+	}
+	$sql_select = $sql_select." dst_port=$sql_req_dst_port";
+	$a = 1;
+    }
     if ($sql_req_proto ne '') {
 	if ($a eq 1) {
 	    $sql_select = $sql_select." and";
@@ -234,7 +248,7 @@ sub do_sql_req {
 	$a = 1;
     }
     $sql_select = $sql_select." limit $sql_req_limit";
-#    print $sql_select,"\n"; #debug
+    print $sql_select,"\n"; #debug
     $sth = $dbh->prepare($sql_select);
     $sth->execute ();
     $i = 0;
