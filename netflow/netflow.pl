@@ -41,46 +41,8 @@ print qq~
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body {
-    font-family: "Lato", sans-serif;
-}
-
-.sidenav {
-    height: 100%;
-    width: 200px;
-    position: fixed;
-    z-index: 1;
-    top: 0;
-    left: 0;
-    background-color: #000;
-    overflow-x: hidden;
-    padding-top: 20px;
-}
-
-.sidenav a {
-    padding: 6px 8px 6px 16px;
-    text-decoration: none;
-    font-size: 25px;
-    color: #818181;
-    display: block;
-}
-
-.sidenav a:hover {
-    color: #f1f1f1;
-}
-
-.main {
-    margin-left: 200px; /* Same as the width of the sidenav */
-    font-size: 28px; /* Increased text to enable scrolling */
-    padding: 0px 10px;
-}
-
-@media screen and (max-height: 450px) {
-    .sidenav {padding-top: 15px;}
-    .sidenav a {font-size: 18px;}
-}
-</style>
+<title>Netflow File Analyzer Reports</title>
+<link href="css/styles.css" rel="stylesheet" media="all" />
 </head>
 <body>
 
@@ -131,7 +93,7 @@ sub pg_sql_req {
 print qq~
   <h2>SQL REQ</h2>
   <form action=netflow.pl method=post>
-  <table border="2">
+  <table class="table_sqlreq">
   <tbody>
   <tr>
     <td>Source IP (src_ip)</td>
@@ -141,21 +103,21 @@ print qq~
   </tr>
   <tr>
     <td>Source port (src_port)</td>
-    <td><input name=sql_req_src_port type=text value=$sql_req_src_port></td>
+    <td><input name=sql_req_src_port type="number" min="0" max="65535" value=$sql_req_src_port></td>
     <td>Destination port (dst_port)</td>
-    <td><input name=sql_req_dst_port type=text value=$sql_req_dst_port></td>
+    <td><input name=sql_req_dst_port type="number" min="0" max="65535" value=$sql_req_dst_port></td>
   </tr>
   <tr>
     <td>Date from</td>
-    <td><input name=sql_req_date_from type=text value=$sql_req_date_from></td>
+    <td><input name=sql_req_date_from type="date" value=$sql_req_date_from></td>
     <td>Date to</td>
     <td><input name=sql_req_date_to type=text value=$sql_req_date_to></td>
   </tr>
   <tr>
     <td>Time from</td>
-    <td><input name=sql_req_time_from type=text value=$sql_req_time_from></td>
+    <td><input name=sql_req_time_from type="time" value=$sql_req_time_from></td>
     <td>Time to</td>
-    <td><input name=sql_req_time_to type=text value=$sql_req_time_to></td>
+    <td><input name=sql_req_time_to type="time" value=$sql_req_time_to></td>
   </tr>
   <tr>
     <td>Protocol</td>
@@ -240,9 +202,9 @@ sub do_sql_req {
 	if ($a eq 1) {
 	    $sql_select = $sql_select." and";
 	}
-	$sql_f_df = $sql_req_date_from.$sql_req_time_from;
+	$sql_f_df = $sql_req_date_from.$sql_req_time_from."00";
 	$sql_f_df =~ s/[-:]//g;
-	$sql_f_dt = $sql_req_date_to.$sql_req_time_to;
+	$sql_f_dt = $sql_req_date_to.$sql_req_time_to."00";
 	$sql_f_dt =~ s/[-:]//g;
 	$sql_select = $sql_select." utime between $sql_f_df and $sql_f_dt";
 	$a = 1;
@@ -267,39 +229,39 @@ sub do_sql_req {
     $sth->finish;
     $dbh->disconnect;
     print qq~
-      <table border=1>
-      <tbody>
-      <tr>
-        <td>src_ip</td>
-        <td>src_port</td>
-        <td>dst_ip</td>
-        <td>dst_port</td>
-        <td>proto</td>
-        <td>packets</td>
-        <td>bytes</td>
-        <td>type</td>
-        <td>utime</td>
-      </tr>
+  <table class="table_sqlresult">
+  <tbody>
+  <tr>
+    <th>src_ip</th>
+    <th>src_port</th>
+    <th>dst_ip</th>
+    <th>dst_port</th>
+    <th>proto</th>
+    <th>packets</th>
+    <th>bytes</th>
+    <th>type</th>
+    <th>utime</th>
+  </tr>
     ~;
     $i1 = $i;
     $i = 1;
     while ($i1 > 0) {
-	print "<tr>\n";
-        print "<td>@sql_src_ip[$i]</td>\n";
-        print "<td>@sql_src_port[$i]</td>\n";
-        print "<td>@sql_dst_ip[$i]</td>\n";
-        print "<td>@sql_dst_port[$i]</td>\n";
-        print "<td>@sql_proto[$i]</td>\n";
-        print "<td>@sql_packets[$i]</td>\n";
-        print "<td>@sql_bytes[$i]</td>\n";
-        print "<td>@sql_type[$i]</td>\n";
-        print "<td>@sql_utime[$i]</td>\n";
-        print "</tr>\n";
+	print "  <tr>\n";
+        print "    <td>@sql_src_ip[$i]</td>\n";
+        print "    <td>@sql_src_port[$i]</td>\n";
+        print "    <td>@sql_dst_ip[$i]</td>\n";
+        print "    <td>@sql_dst_port[$i]</td>\n";
+        print "    <td>@sql_proto[$i]</td>\n";
+        print "    <td>@sql_packets[$i]</td>\n";
+        print "    <td>@sql_bytes[$i]</td>\n";
+        print "    <td>@sql_type[$i]</td>\n";
+        print "    <td>@sql_utime[$i]</td>\n";
+        print "  </tr>\n";
         $i++;
         $i1--;
     }
-    print "</tbody>\n";
-    print "</table>\n";
+    print "  </tbody>\n";
+    print "  </table>\n";
 }
 
 sub pg_top_in {
