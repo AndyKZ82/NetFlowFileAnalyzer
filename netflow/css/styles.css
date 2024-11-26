@@ -90,10 +90,6 @@ input:invalid {
   border: 2px solid red;
 }
 
-#input:invalid:required {
-#  background-image: linear-gradient(to right, pink, lightgreen);
-#}
-
 input:valid {
   border: 1px solid black;
 }
