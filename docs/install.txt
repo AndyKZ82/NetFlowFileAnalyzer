@@ -6,7 +6,7 @@ Copy folder "netflow" to your web site.
 
 httpd.conf:
 
-Index and option for folder.
+Index and options for folder.
 
 <Directory "path/to/netflow>
     Options ExecCGI
@@ -18,6 +18,12 @@ Allow scripts and associate .pl with CGI.
 
 AddHandler cgi-script .cgi .pl
 
+Enable cgi module
+
+<IfModule mpm_prefork_module>
+        LoadModule cgi_module libexec/apache24/mod_cgi.so
+</IfModule>
+
 Perl
 
 Need modules Net::IP::Match::Regexp,Switch
@@ -28,6 +34,10 @@ install DBD::mysql
 install Net::IP::Match::Regexp
 install Switch
 
+or pkg (FreeBSD)
+
+pkg install p5-DBD-mysql p5-Net-IP-Match-Regexp p5-Switch
+
 MySQL
 
 Create database:
@@ -36,8 +46,9 @@ shell> mysql -uroot -p<пароль>
 mysql> CREATE DATABASE netflow CHARACTER SET utf8 COLLATE utf8_bin;
 mysql> CREATE USER 'netflow'@'localhost' IDENTIFIED BY 'password';
 mysql> GRANT ALL PRIVILEGES ON netflow.* TO 'netflow'@'localhost';
-mysql> quit;
 
 Create tables:
 
-create table ifaces (id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT, iface CHAR(30) NOT NULL, PRIMARY KEY (id));
+mysql> use netflow;
+mysql> CREATE TABLE ifaces (id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT, iface CHAR(30) NOT NULL, PRIMARY KEY (id));
+mysql> quit;
