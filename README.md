@@ -2,7 +2,7 @@
 
 NetFlowFileAnalyzer is a web UI to obtain various network interface traffic statistics.
 
-Files generated netflow-capture (package flow-tools) loads to mysql DB by script my month.
+Files generated netflow-capture (package flow-tools) loads to mysql DB by script by month.
 
 - License: none.
 - Version: 0
