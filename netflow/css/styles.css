@@ -28,8 +28,15 @@ body {
 
 .main {
     margin-left: 200px; /* Same as the width of the sidenav */
-    font-size: 28px; /* Increased text to enable scrolling */
     padding: 0px 10px;
+}
+
+.main h1 {
+    font-size: 35px;
+}
+
+.main p {
+    font-size: 16px;
 }
 
 @media screen and (max-height: 450px) {
@@ -87,9 +94,34 @@ body {
 }
 
 input:invalid {
-  border: 2px solid red;
+    border: 2px solid red;
 }
 
 input:valid {
-  border: 1px solid black;
+    border: 1px solid black;
+}
+
+.text_ip {
+    color: #2266dd;
+    width: 100%;
+}
+
+.text_ip::placeholder {
+    opacity: 0.5;
+}
+
+.text_port {
+    color: #2266dd;
+    width: 50%;
+}
+.text_port::placeholder {
+    opacity: 0.5;
+}
+
+.date_date {
+    color: #2266dd;
+}
+
+.time_time {
+    color: #2266dd;
 }

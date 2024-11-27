@@ -21,18 +21,19 @@ my $sql_req_time_from = $forma->param("sql_req_time_from");
 my $sql_req_time_to = $forma->param("sql_req_time_to");
 if ($sql_req_date_from ne '') {
     if ($sql_req_time_from eq '') {
-	$sql_req_time_from = "00:00:00";
+	$sql_req_time_from = "00:00";
     }
     if ($sql_req_date_to eq '') {
 	$sql_req_date_to = $sql_req_date_from;
     }
     if ($sql_req_time_to eq '') {
-	$sql_req_time_to = "23:59:59";
+	$sql_req_time_to = "23:59";
     }
 }
 my $sql_req_proto = $forma->param("sql_req_proto");
-my $sql_table = "p5rb_2024_10";
+my $sql_table = "ln17rb_2024_10";
 my $sql_req_limit = 100;
+my $use_debug = 1;
 #my $sql_tmp_ip = "192.168.37.10";
 
 #header
@@ -77,7 +78,7 @@ print qq~
 sub pg_main {
 
 print qq~
-  <h2>Sidebar</h2>
+  <h1>Sidebar</h1>
   <p>This sidebar is of full height (100%) and always shown.</p>
   <p>Scroll down the page to see the result.</p>
   <p>Some text to enable scrolling.. Lorem ipsum dolor sit amet, illum definitiones no quo, maluisset concludaturque et eum, altera fabulas ut quo. Atqui causae gloriatur ius te, id agam omnis evertitur eum. Affert laboramus repudiandae nec et. Inciderint efficiantur his ad. Eum no molestiae voluptatibus.</p>
@@ -91,33 +92,33 @@ print qq~
 
 sub pg_sql_req {
 print qq~
-  <h2>SQL REQ</h2>
+  <h1>SQL REQ</h1>
   <form action=netflow.pl method=post>
   <table class="table_sqlreq">
   <tbody>
   <tr>
     <td>Source IP (src_ip)</td>
-    <td><input name=sql_req_src_ip type=text value=$sql_req_src_ip></td>
+    <td><input class="text_ip" name=sql_req_src_ip type="text" placeholder="1-255.0-255.0-255.1-255" title="It should be correct IP address or empty (all)" pattern="([1-9]|[1-9][0-9]|[1][0-9][0-9]|[2][0-4][0-9]|[2][5][0-5])[.]([0-9]|[1-9][0-9]|[1][0-9][0-9]|[2][0-4][0-9]|[2][5][0-5])[.]([0-9]|[1-9][0-9]|[1][0-9][0-9]|[2][0-4][0-9]|[2][5][0-5])[.]([1-9]|[1-9][0-9]|[1][0-9][0-9]|[2][0-4][0-9]|[2][5][0-5])" value=$sql_req_src_ip></td>
     <td>Destination IP (dst_ip)</td>
-    <td><input name=sql_req_dst_ip type=text value=$sql_req_dst_ip></td>
+    <td><input class="text_ip" name=sql_req_dst_ip type="text" placeholder="1-255.0-255.0-255.1-255" title="It should be correct IP address or empty (all)" pattern="([1-9]|[1-9][0-9]|[1][0-9][0-9]|[2][0-4][0-9]|[2][5][0-5])[.]([0-9]|[1-9][0-9]|[1][0-9][0-9]|[2][0-4][0-9]|[2][5][0-5])[.]([0-9]|[1-9][0-9]|[1][0-9][0-9]|[2][0-4][0-9]|[2][5][0-5])[.]([1-9]|[1-9][0-9]|[1][0-9][0-9]|[2][0-4][0-9]|[2][5][0-5])" value=$sql_req_dst_ip></td>
   </tr>
   <tr>
     <td>Source port (src_port)</td>
-    <td><input name=sql_req_src_port type="number" min="0" max="65535" value=$sql_req_src_port></td>
+    <td><input class="text_port" name=sql_req_src_port type="number" min="0" max="65535" placeholder="0-65535" title="It should be 0, correct port between 1 and 65535, or empty (all)" value=$sql_req_src_port></td>
     <td>Destination port (dst_port)</td>
-    <td><input name=sql_req_dst_port type="number" min="0" max="65535" value=$sql_req_dst_port></td>
+    <td><input class="text_port" name=sql_req_dst_port type="number" min="0" max="65535" placeholder="0-65535" title="It should be 0, correct port between 1 and 65535, or empty (all)" value=$sql_req_dst_port></td>
   </tr>
   <tr>
     <td>Date from</td>
-    <td><input name=sql_req_date_from type="date" value=$sql_req_date_from></td>
+    <td><input class="date_date" name=sql_req_date_from type="date" value=$sql_req_date_from></td>
     <td>Date to</td>
-    <td><input name=sql_req_date_to type=text value=$sql_req_date_to></td>
+    <td><input class="date_date" name=sql_req_date_to type="date" value=$sql_req_date_to></td>
   </tr>
   <tr>
     <td>Time from</td>
-    <td><input name=sql_req_time_from type="time" value=$sql_req_time_from></td>
+    <td><input class="time_time" name=sql_req_time_from type="time" value=$sql_req_time_from></td>
     <td>Time to</td>
-    <td><input name=sql_req_time_to type="time" value=$sql_req_time_to></td>
+    <td><input class="time_time" name=sql_req_time_to type="time" value=$sql_req_time_to></td>
   </tr>
   <tr>
     <td>Protocol</td>
@@ -204,13 +205,15 @@ sub do_sql_req {
 	}
 	$sql_f_df = $sql_req_date_from.$sql_req_time_from."00";
 	$sql_f_df =~ s/[-:]//g;
-	$sql_f_dt = $sql_req_date_to.$sql_req_time_to."00";
+	$sql_f_dt = $sql_req_date_to.$sql_req_time_to."59";
 	$sql_f_dt =~ s/[-:]//g;
 	$sql_select = $sql_select." utime between $sql_f_df and $sql_f_dt";
 	$a = 1;
     }
     $sql_select = $sql_select." limit $sql_req_limit";
-    print $sql_select,"\n"; #debug
+    if ($use_debug) {
+	print "<p>",$sql_select,"</p>\n"; #debug
+    }
     $sth = $dbh->prepare($sql_select);
     $sth->execute ();
     $i = 0;
@@ -261,25 +264,25 @@ sub do_sql_req {
         $i1--;
     }
     print "  </tbody>\n";
-    print "  </table>\n";
+    print "  </table>";
 }
 
 sub pg_top_in {
 
 print qq~
-  <h2>TOP IN</h2>
+  <h1>TOP IN</h1>
 ~;
 }
 sub pg_top_out {
 
 print qq~
-  <h2>TOP OUT</h2>
+  <h1>TOP OUT</h1>
 ~;
 }
 sub pg_options {
 
 print qq~
-  <h2>OPTIONS</h2>
+  <h1>OPTIONS</h1>
 ~;
 }
 
