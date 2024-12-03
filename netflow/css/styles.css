@@ -58,11 +58,11 @@ body {
 }
 
 .table_sqlreq tbody tr:nth-child(odd){
-    background: #fff;
+    background: #ffffff;
 }
 
 .table_sqlreq tbody tr:nth-child(even){
-    background: #F7F7F7;
+    background: #e7f7f7;
 }
 
 .table_sqlresult {
@@ -124,4 +124,13 @@ input:valid {
 
 .time_time {
     color: #2266dd;
+}
+
+.button_button {
+    font-size: 14px;
+    font-weight: bold;
+    padding: 3px 16px;
+    background-color: #2266dd;
+    color: #ffffff;
+    border: 1px solid black;
 }

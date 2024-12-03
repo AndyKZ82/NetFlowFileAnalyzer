@@ -127,7 +127,7 @@ print qq~
     <td>To be here</td>
   </tr>
   <tr>
-    <td colspan="4" align="center"><input name="s_button" type="submit"></td>
+    <td colspan="4" align="right"><input class="button_button" name="s_button" type="submit"><input class="button_button" name="r_button" type="reset"></td>
   </tr>
   </tbody>
   </table>
